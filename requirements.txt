@@ -1,0 +1,7 @@
+git+https://github.com/openai/whisper.git
+moviepy
+ffmpeg-python
+spacy
+numpy
+matplotlib
+pydub

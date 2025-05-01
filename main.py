@@ -1,12 +1,18 @@
 import os
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 from pathlib import Path
 import whisper
 import json
 import spacy
+from textblob import TextBlob
 from pydub import AudioSegment
 import matplotlib.pyplot as plt
 import numpy as np
 from moviepy.editor import AudioFileClip, ImageSequenceClip
+from smart_highlight_selector import smart_highlight_selector
+from pydub.silence import detect_nonsilent
+from video_input_handler import extract_audio_from_video, cut_highlight_video_clips
+
 
 # === 1. Utility: Create folders if missing ===
 def setup_folders():
@@ -68,42 +74,52 @@ def get_audio_duration(file_path):
 # === 5. Main pipeline ===
 def main():
     print("🎬 Podcast-to-Reels: Transcription Phase Started!\n")
-
     setup_folders()
 
-    input_files = [f for f in Path("input").glob("*.mp3")]
-
+    input_files = list(Path("input").glob("*.mp3")) + list(Path("input").glob("*.mp4")) + list(Path("input").glob("*.mov"))
     if not input_files:
-        print("❗ No .mp3 files found in 'input/' folder. Please add your podcast files and try again.")
+        print("❗ No media files found in 'input/' folder.")
         return
 
     model_name = select_whisper_model()
-
     print("⏳ Loading Whisper model...")
     model = whisper.load_model(model_name)
     print("✅ Model loaded successfully.\n")
 
     for file_path in input_files:
         try:
-            transcribe_audio(file_path, model)
-            transcript_path = Path("transcripts") / f"{file_path.stem}.json"
-            highlights = detect_highlights(transcript_path)
-            cut_audio_clips(file_path, highlights)
-            audio_clip_files = list(Path("audio_clips").glob(f"{file_path.stem}_clip_*.mp3"))
-            for clip_file in audio_clip_files:
-                generate_waveform_video(clip_file)
+            if file_path.suffix in ['.mp4', '.mov']:
+                extracted_audio = extract_audio_from_video(file_path, Path("input/temp_audio.wav"))
+                audio_for_pipeline = extracted_audio
+            else:
+                audio_for_pipeline = file_path
+
+            transcribe_audio(audio_for_pipeline, model)
+            transcript_path = Path("transcripts") / f"{audio_for_pipeline.stem}.json"
+            highlights = smart_highlight_selector(transcript_path, min_clip_duration=20, max_clip_duration=90)
+
+            if file_path.suffix in ['.mp4', '.mov']:
+                cut_highlight_video_clips(file_path, highlights)
+            else:
+                cut_audio_clips(audio_for_pipeline, highlights)
+                audio_clip_files = list(Path("audio_clips").glob(f"{audio_for_pipeline.stem}_clip_*.mp3"))
+                for clip_file in audio_clip_files:
+                    generate_waveform_video(clip_file)
 
         except Exception as e:
             print(f"❗ Error processing {file_path.name}: {e}")
 
-    print("\n🎉 All podcasts transcribed successfully! Transcripts saved in 'transcripts/' folder.")
+    print("\n🎉 All podcasts processed! Transcripts and clips saved.")
 
-# === Highlight Detection Function ===
+
+# === Smart Highlight Detection ===
 def detect_highlights(transcript_json_path):
-    print(f"🧠 Detecting highlights in {transcript_json_path.name} ...")
+    print(f"🧠 Detecting smart highlights in {transcript_json_path.name} ...")
 
     # Load spaCy model
     nlp = spacy.load("en_core_web_sm")
+
+    important_keywords = ["success", "growth", "failure", "habit", "mindset", "motivation", "leadership", "achievement"]
 
     with open(transcript_json_path, "r") as f:
         transcript = json.load(f)
@@ -114,36 +130,57 @@ def detect_highlights(transcript_json_path):
         text = segment["text"]
         doc = nlp(text)
 
-        if len(doc.text.split()) > 10 or len(doc.ents) >= 2:
+        # Sentiment scoring
+        blob = TextBlob(text)
+        sentiment = blob.sentiment.polarity  # Range: -1 (negative) to +1 (positive)
+
+        # Keyword matching
+        keyword_match = any(keyword in text.lower() for keyword in important_keywords)
+
+        # Length check
+        long_enough = len(text.split()) > 10
+
+        # Named entities check
+        has_entities = len(doc.ents) >= 2
+
+        # Decision logic
+        if sentiment >= 0.5 or sentiment <= -0.5 or keyword_match or long_enough or has_entities:
             highlights.append({
                 "start": segment["start"],
                 "end": segment["end"],
-                "text": segment["text"]
+                "text": segment["text"],
+                "sentiment": sentiment,
+                "keyword_match": keyword_match
             })
 
-    print(f"✅ Found {len(highlights)} highlight segments.\n")
+    print(f"✅ Found {len(highlights)} smart highlight segments.\n")
     return highlights
 
 
 
 # === Cut audio clips from highlights ===
 def cut_audio_clips(audio_file_path, highlights):
-    print(f"✂️ Cutting clips from {audio_file_path.name} ...")
+    print(f"\n✂️ Cutting clips from {audio_file_path.name} ...")
+    audio = AudioSegment.from_file(audio_file_path)
 
-    full_audio = AudioSegment.from_file(audio_file_path)
+    buffer_time = 1500  # 1.5 seconds buffer to soften endings
+    nonsilent_ranges = detect_nonsilent(audio, min_silence_len=500, silence_thresh=-40)
 
-    for idx, highlight in enumerate(highlights):
-        start_ms = int(highlight["start"] * 1000)  # pydub uses milliseconds
-        end_ms = int(highlight["end"] * 1000)
+    for idx, h in enumerate(highlights):
+        start = int(h["start"] * 1000)
+        end = int(h["end"] * 1000)
 
-        clip = full_audio[start_ms:end_ms]
+        new_end = end + buffer_time  # default to end + 1.5s
+        for (ns_start, ns_end) in nonsilent_ranges:
+            if ns_start >= end:
+                new_end = min(ns_start + buffer_time, len(audio))
+                break
+        new_end = min(new_end, len(audio))
 
-        output_path = Path("audio_clips") / f"{audio_file_path.stem}_clip_{idx+1}.mp3"
-        clip.export(output_path, format="mp3")
-
-        print(f"✅ Saved clip: {output_path.name}")
-
-    print(f"🎉 Done cutting clips for {audio_file_path.name}\n")
+        clip = audio[start:new_end]
+        out_path = Path("audio_clips") / f"{audio_file_path.stem}_clip_{idx+1}.mp3"
+        clip.export(out_path, format="mp3")
+        print(f"✅ Saved clip: {out_path.name} | Duration: {round((new_end-start)/1000, 1)}s")
 
 
 # === Generate Dynamic Waveform Video ===

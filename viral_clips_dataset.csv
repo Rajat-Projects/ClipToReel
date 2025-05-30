@@ -1,0 +1,7 @@
+llm_score,sentiment,length_sec,keyword_hit,text,clip_path,predicted_score,label
+8,-0.05,55.4,0," You can break physically.  You can break mentally.  You can break your spirit.  Because every time you break and in every way that you break,",output/my_video_clip_1.mp4,88,1
+8,0.0,21.0,0," And as you crawl up and out of that dismal and wretched place, as you rise above what you were, and as you take the form of who you are supposed to be,",output/my_video_clip_2.mp4,87,1
+8,0.8,80.0,0, Because I'm a fighter.  Because I win.,output/my_videosk1_clip_1.mp4,100,1
+7,0.0,75.0,0," If you give everything you've got,  I gave everything that I had.",output/my_videosk1_clip_2.mp4,86,1
+7,0.4,28.88,0, I was born in it molded by it I didn't see the light until I was already,output/Out_Work_Everyone_clip_1.mp4,94,1
+7,-0.21250000000000002,70.72,0, and you're gonna fail and you're gonna fail and then you're gonna win if you are experiencing a losing  do you get to fail and fail and fail and fail and all you gotta do is make more,output/Out_Work_Everyone_clip_2.mp4,81,1

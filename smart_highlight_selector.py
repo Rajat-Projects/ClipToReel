@@ -5,6 +5,7 @@ from sentence_transformers import SentenceTransformer, util
 from pathlib import Path
 #from llm_ranker import llm_score_local
 from llm_ranker_improved import llm_score_local
+from utils.scoring import compute_virality_score
 
 nlp = spacy.load("en_core_web_sm")
 sbert = SentenceTransformer('all-MiniLM-L6-v2')
@@ -52,12 +53,19 @@ def smart_highlight_selector(transcript_path, min_clip_duration=20, max_clip_dur
             #score = sentiment + 0.2 * length_score + (1 if keyword_hit else 0)
             llm_score = llm_score_local(combined_text)
             print(f"📊 Final Clip → Duration: {round(duration, 1)}s | LLM Score: {llm_score}")
+            length_sec = round(end_time - start_time, 2)
+            virality_score = compute_virality_score(llm_score, sentiment, keyword_hit, length_sec)
+
             merged.append({
                 "start": start_time,
                 "end": end_time,
                 "text": combined_text,
-                "llm_score": llm_score
-            })
+                "llm_score": llm_score,
+                "sentiment": sentiment,
+                "keyword_hit": keyword_hit,
+                "length_sec": length_sec,
+                "virality_score": virality_score
+                })
 
     top_highlights = sorted(merged, key=lambda x: x['llm_score'], reverse=True)[:top_n]
 

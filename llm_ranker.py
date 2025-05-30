@@ -1,6 +1,6 @@
 import ollama
 
-def llm_score_local(text, model="phi"):
+def llm_score_local(text, model="mistral"):
     prompt = f"Rate the following podcast segment from 1 to 10 based on how emotionally impactful or motivational it would be as a short social media clip:\n\n\"{text}\"\n\nOnly respond with a number between 1 and 10."
 
     response = ollama.chat(

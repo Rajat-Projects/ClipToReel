@@ -12,7 +12,11 @@ from moviepy.editor import AudioFileClip, ImageSequenceClip
 from smart_highlight_selector import smart_highlight_selector
 from pydub.silence import detect_nonsilent
 from video_input_handler import extract_audio_from_video, cut_highlight_video_clips
+from utils.logger import log_clip_data, log_viral_clip_only
+import joblib
 
+
+virality_model = joblib.load("virality_model.pkl")
 
 # === 1. Utility: Create folders if missing ===
 def setup_folders():
@@ -99,7 +103,7 @@ def main():
             highlights = smart_highlight_selector(transcript_path, min_clip_duration=20, max_clip_duration=90)
 
             if file_path.suffix in ['.mp4', '.mov']:
-                cut_highlight_video_clips(file_path, highlights)
+                cut_highlight_video_clips(file_path, highlights, virality_model=virality_model)
             else:
                 cut_audio_clips(audio_for_pipeline, highlights)
                 audio_clip_files = list(Path("audio_clips").glob(f"{audio_for_pipeline.stem}_clip_*.mp3"))
@@ -163,14 +167,14 @@ def cut_audio_clips(audio_file_path, highlights):
     print(f"\n✂️ Cutting clips from {audio_file_path.name} ...")
     audio = AudioSegment.from_file(audio_file_path)
 
-    buffer_time = 1500  # 1.5 seconds buffer to soften endings
+    buffer_time = 1500
     nonsilent_ranges = detect_nonsilent(audio, min_silence_len=500, silence_thresh=-40)
 
     for idx, h in enumerate(highlights):
         start = int(h["start"] * 1000)
         end = int(h["end"] * 1000)
 
-        new_end = end + buffer_time  # default to end + 1.5s
+        new_end = end + buffer_time
         for (ns_start, ns_end) in nonsilent_ranges:
             if ns_start >= end:
                 new_end = min(ns_start + buffer_time, len(audio))
@@ -182,6 +186,34 @@ def cut_audio_clips(audio_file_path, highlights):
         clip.export(out_path, format="mp3")
         print(f"✅ Saved clip: {out_path.name} | Duration: {round((new_end-start)/1000, 1)}s")
 
+        # Prepare features & predict
+        features = [[
+            h["llm_score"],
+            h["sentiment"],
+            h["length_sec"],
+            int(h["keyword_hit"])
+        ]]
+        label = int(virality_model.predict(features)[0])
+
+        if h["text"] in existing_texts:
+            print(f"⏩ Skipping duplicate clip: {h['text'][:30]}...")
+            continue
+
+        clip_data = {
+            "llm_score": h["llm_score"],
+            "sentiment": h["sentiment"],
+            "length_sec": h["length_sec"],
+            "keyword_hit": int(h["keyword_hit"]),
+            "text": h["text"],
+            "clip_path": str(out_path),
+            "predicted_score": h["virality_score"],
+            "label": label
+        }
+
+        log_clip_data(clip_data)
+
+        if label == 1:
+            log_viral_clip_only(clip_data)
 
 # === Generate Dynamic Waveform Video ===
 def generate_waveform_video(audio_clip_path):

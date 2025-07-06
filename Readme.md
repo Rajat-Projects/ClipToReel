@@ -4,12 +4,6 @@
 
 ---
 
-## 🌐 Live Demo (Optional)
-
-Add a demo GIF or screen recording showing the workflow from uploading a video to downloading viral clips.
-
----
-
 ## 🚀 Features
 
 * 🎮 Smart Highlight Detection using audio patterns and duration

@@ -1,125 +1,197 @@
-# 🎹 Podcast-to-Reels Generator (Local, Open-Source)
+# 🎥 ClipToReel
 
-## 📋 Project Overview
-
-**Podcast-to-Reels** is a fully **local**, **open-source** Python app that:
-- Transcribes long podcast episodes (.mp3 or .mp4) using OpenAI’s Whisper.
-- Detects highlight moments using NLP techniques (spaCy).
-- Cuts those highlights into **short audio/video clips** automatically.
-- For audio-only podcasts, it **creates dynamic waveform videos** as reels.
-- Adds optional subtitles to make reels social-media-ready.
-
-Built for **YouTube Shorts**, **Instagram Reels**, **TikTok**, and more!
+**ClipToReel** is an AI-powered video intelligence system that automatically generates short, high-impact highlight reels from long-form podcasts or videos based on virality and semantic relevance. It combines modern video/audio processing, deep learning-based virality prediction, and large language models (LLMs) to evaluate and extract the most engaging moments in a video.
 
 ---
 
-## 🛠 Folder Structure
+## 🌐 Live Demo (Optional)
+
+Add a demo GIF or screen recording showing the workflow from uploading a video to downloading viral clips.
+
+---
+
+## 🚀 Features
+
+* 🎮 Smart Highlight Detection using audio patterns and duration
+* 🤖 LLM-based relevance scoring for contextual importance
+* 📊 Virality Prediction Model trained on metadata features
+* 📁 Multi-format input support (MP4, MP3, WAV)
+* 📊 Interactive Frontend built with React + Tailwind CSS
+* 💾 Downloadable short clips for social media or reels
+* 🔄 Modular architecture (frontend/backend separation)
+
+---
+
+## 🎓 Architecture Overview
 
 ```
-podcast-to-reels/
-│
-├── input/             → 🎷 Drop full podcast files (.mp3/.mp4)
-├── output/            → 🎥 Generated short reels (.mp4)
-├── transcripts/       → 📝 Saved transcription files (.json)
-├── audio_clips/       → 🎵 Temporary extracted audio segments
-├── waveforms/         → 🎨 Temporary waveform visualizations
-├── podcastenv/        → Virtual environment (Python venv)
-├── requirements.txt   → Required Python libraries
-└── main.py            → Master script (transcription → highlight → reel generation)
+            [Frontend - ReactJS Upload UI]       
+                        |
+        +---------------+----------------+
+        | Upload Podcast / Video / Audio |
+        +---------------+----------------+
+                        |
+              POST /api/upload
+                        |
+         [Backend - Flask API Server]
+                        |
+    +-------------------|------------------------+
+    |   Video Input Handler                      |
+    |   Smart Highlight Selector (scoring.py)    |
+    |   LLM Relevance Ranker                     |
+    |   Virality Classifier (XGBoost model)      |
+    +-------------------|------------------------+
+                        |
+               Returns Ranked + Labeled Clips
+                        |
+               [Frontend Preview UI]
 ```
 
 ---
 
-## 🔧 Setup Instructions
+## 📊 Tech Stack
 
-1. Clone or create the `podcast-to-reels/` folder manually.
-2. Open terminal inside the project folder.
-3. Create and activate a virtual environment:
+### Backend
+
+* Python 3.10+
+* Flask + Flask-CORS
+* OpenAI Whisper (for transcription)
+* spaCy / TextBlob / Sentence Transformers
+* XGBoost, Scikit-learn
+* MoviePy / FFmpeg / Pydub
+* LLM (via `ollama`, or others)
+
+### Frontend
+
+* ReactJS (with Vite or CRA)
+* Tailwind CSS
+* Axios
+
+---
+
+## ⚙️ Setup Instructions
+
+### 1. Clone the Repository
 
 ```bash
-python -m venv podcastenv
-source podcastenv/bin/activate      # (Mac/Linux)
-podcastenv\Scripts\activate         # (Windows)
+git clone https://github.com/Rajat-Projects/ClipToReel.git
+cd ClipToReel
 ```
 
-4. Install dependencies:
+### 2. Setup Backend
 
 ```bash
+cd backend
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-python -m spacy download en_core_web_sm
 ```
 
-5. Add your `.mp3` (or `.mp4`) podcast files to the `input/` folder.
-6. Run the app:
+### 3. Run Backend Server
 
 ```bash
 python main.py
 ```
 
----
+Runs the API at `http://127.0.0.1:5000/`
 
-## ✨ Key Features
-
-- 🎷 **Whisper Transcription** — fast and accurate.
-- 🧐 **NLP Highlight Detection** — finds engaging moments automatically.
-- ✂️ **Clip Extraction** — cuts podcast into mini reels.
-- 🎨 **Dynamic Waveform Video Creation** — makes reels lively even for audio-only podcasts.
-- 🔤 **Optional Subtitle Overlay** — adds captions for better engagement.
-- ⚡ **Fast, Local, Free** — no API costs, no data leaks.
-
----
-
-## 📈 Whisper Model Options
-
-When running the app, you can select different Whisper models depending on your machine:
-
-| Model  | Speed (Fast → Slow) | Accuracy (Low → High) | Best for |
-|--------|---------------------|----------------------|----------|
-| tiny   | 🟢🟢🟢🟢 | 🔴🔴 | Very fast tests |
-| small  | 🟢🟢🟢 | 🔴🔴🔴 | Real-world podcasts |
-| base   | 🟢🟢 | 🔴🔴🔴🔴 | Balanced |
-| medium | 🟢 | 🔴🔴🔴🔴🔴 | High-quality work |
-| large  | 🔴 | 🔴🔴🔴🔴🔴 | Research-grade, GPU needed |
-
----
-
-## ⚠️ Known Limitations
-
-- Very large podcast files (90+ minutes) may take longer to process.
-- Whisper model loading may consume a lot of RAM (suggest using `small` or `tiny` models for slower machines).
-- Some subtitle timing inaccuracies for very noisy podcasts.
-- No direct YouTube download support (coming in future upgrades).
-
----
-
-## 🚀 Future Improvements (Planned)
-
-- GUI interface (Streamlit/Tkinter)
-- Auto upload clips to Instagram/TikTok/YouTube
-- Multiple design templates for reels
-- Sentiment-based highlight detection (more emotional reels)
-
----
-
-## 🧑‍💻 Author
-
-Built with ❤️ by [Your Name Here]
-
----
-
-# 📢 Quick Start Summary
+### 4. Setup Frontend
 
 ```bash
-# Terminal commands:
-cd podcast-to-reels
-python -m venv podcastenv
-source podcastenv/bin/activate      # (Mac/Linux) OR podcastenv\Scripts\activate (Windows)
-pip install -r requirements.txt
-python -m spacy download en_core_web_sm
-
-# Drop your .mp3 into input/
-python main.py
+cd ../frontend
+npm install
+npm run dev
 ```
 
-👉 Your Reels are ready in the `output/` folder! 🚀
+---
 
+## 👁️ Usage Guide
+
+### Upload and Process
+
+* Select a `.mp3` or `.mp4` file via the React UI
+* It triggers `/api/upload` followed by `/api/process`
+* Shows table of clips with:
+
+  * LLM Score
+  * Virality Score
+  * Viral/Not Viral label
+  * Download and View options
+
+### How It Works
+
+1. **Transcribe Audio**: Whisper or pydub extracts transcript.
+2. **Segment**: Audio/video segmented into short clips.
+3. **Score**: Each clip is scored using:
+
+   * Relevance (via LLM)
+   * Virality model (`virality_model.pkl`)
+4. **Select Highlights**: Top clips are chosen and returned.
+
+---
+
+## 🌊 Virality Model Training
+
+### File: `train_virality_model.py`
+
+* Extracts features like energy, duration, semantic embedding distance
+* Trains an XGBoost classifier
+* Saves model as `virality_model.pkl`
+
+To retrain:
+
+```bash
+python train_virality_model.py
+```
+
+---
+
+## 📂 Project Structure
+
+```
+ClipToReel/
+├── backend/
+│   ├── main.py                        # Entry point
+│   ├── video_input_handler.py
+│   ├── smart_highlight_selector.py
+│   ├── llm_ranker_improved.py
+│   ├── scoring.py                     # Custom score logic
+│   ├── auto_label_unlabeled_clips.py
+│   ├── train_virality_model.py       # Model training script
+│   ├── virality_model.pkl            # Saved classifier
+├── frontend/
+│   ├── components/
+│   │   └── UploadForm.jsx            # React upload & results UI
+│   ├── index.css                     # Tailwind styling
+│   └── App.jsx
+├── input/, audio_clips/, waveforms/  # Input & generated media
+├── requirements.txt
+```
+
+---
+
+## 👤 Author
+
+**Rajat Pednekar**
+[GitHub](https://github.com/Rajat-Projects)
+
+---
+
+## 🌐 License
+
+This project is licensed under the **MIT License**. See `LICENSE` for details.
+
+---
+
+## 🙋 Contributing
+
+Pull requests are welcome. For major changes, please open an issue first to discuss what you’d like to change.
+
+---
+
+## ✨ Future Enhancements
+
+* Add support for YouTube URL input
+* Integrate TTS for highlight voiceover
+* Auto-publish to Instagram Reels / TikTok
+* UI to edit and stitch clips manually
